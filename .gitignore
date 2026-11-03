@@ -10,9 +10,9 @@ __pycache__/
 *.db-wal
 *.db-shm
 *.log
-profiles/
-renders/
-screenshots/
+projects/
+outputs/
+models/
 logs/
 _work/
 

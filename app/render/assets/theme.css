@@ -1,0 +1,360 @@
+/* Theme tối công nghệ. Mọi kích thước tính theo vw (phần trăm chiều rộng khung hình),
+   nên cùng một trang dựng được cả 540x960 (nháp) và 1080x1920 (bản cuối).
+   Màu và font được trang Thương hiệu ghi đè qua biến CSS. */
+:root {
+  --bg1: #070b18;
+  --bg2: #101a36;
+  --text: #f4f6fb;
+  --muted: #9aa5bd;
+  --accent: #4f8cff;
+  --accent-2: #ffa64d;
+  --accent-3: #ff5d6c;
+  --accent-4: #3ddc97;
+  --glow: 79, 140, 255;
+  --card: rgba(255, 255, 255, 0.06);
+  --card-border: rgba(255, 255, 255, 0.14);
+  --font: "Segoe UI", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  transition: none !important;
+  animation: none !important;
+}
+
+html,
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(130vw 80vh at 20% 5%, var(--bg2), var(--bg1));
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+#bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Vùng an toàn: chừa trên ~12% và dưới ~25% cho giao diện TikTok/Reels/Shorts */
+#stage {
+  position: absolute;
+  left: 7vw;
+  right: 7vw;
+  top: 17vh;
+}
+
+#brand {
+  position: absolute;
+  left: 7vw;
+  top: 7vh;
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  font-size: 3.2vw;
+  font-weight: 700;
+  color: var(--muted);
+}
+#brand img {
+  height: 6vw;
+  width: auto;
+  border-radius: 1.4vw;
+}
+
+.w { display: inline-block; }
+.accent { color: var(--accent); }
+.accent-2 { color: var(--accent-2); }
+.accent-3 { color: var(--accent-3); }
+.accent-4 { color: var(--accent-4); }
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.6vw;
+  margin-bottom: 3vw;
+  font-size: 3.4vw;
+  font-weight: 700;
+  letter-spacing: 0.35vw;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.tag::before {
+  content: "";
+  width: 6vw;
+  height: 0.5vw;
+  border-radius: 1vw;
+  background: currentColor;
+}
+
+.headline {
+  font-size: 9.6vw;
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.2vw;
+}
+.headline.md { font-size: 8.4vw; }
+.headline .line {
+  display: block;
+  text-wrap: balance; /* chia dòng đều, không để một chữ rớt xuống dòng một mình */
+}
+
+.sub {
+  margin-top: 4vw;
+  font-size: 4.6vw;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.ico { flex: none; }
+
+/* hook */
+.chips {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.6vw;
+  margin-top: 8vw;
+}
+.chip, .card, .browser, .node, .step, .check, .bullet, .bubble {
+  border-radius: 3vw;
+  background: var(--card);
+  border: 0.25vw solid var(--card-border);
+  box-shadow: 0 2vw 6vw rgba(0, 0, 0, 0.35);
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 2vw;
+  padding: 3vw 3.4vw;
+  font-size: 4.3vw;
+  font-weight: 700;
+}
+.chip .ico { font-size: 4.8vw; }
+
+/* question */
+.big-ico {
+  font-size: 18vw;
+  margin-bottom: 4vw;
+}
+
+/* stat */
+.stat { margin-top: 2vw; }
+.stat-num {
+  font-size: 22vw;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.6vw;
+  font-variant-numeric: tabular-nums;
+}
+.stat-label {
+  margin-top: 2vw;
+  font-size: 6vw;
+  font-weight: 700;
+}
+
+/* screenshot */
+.browser {
+  margin-top: 6vw;
+  overflow: hidden;
+  background: #0d1426;
+}
+.browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  padding: 2.2vw 3vw;
+  background: rgba(255, 255, 255, 0.06);
+  border-bottom: 0.25vw solid var(--card-border);
+}
+.dot { width: 2vw; height: 2vw; border-radius: 50%; display: inline-block; }
+.dot.r { background: #ff5f57; }
+.dot.y { background: #febc2e; }
+.dot.g { background: #28c840; }
+.url {
+  margin-left: 2vw;
+  font-size: 2.8vw;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.browser-view {
+  height: 50vw; /* giữ cả khung ảnh và nhãn phía trên vùng phụ đề */
+  overflow: hidden;
+}
+.browser-view img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+}
+.browser-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4vw;
+  color: var(--muted);
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.6vw;
+  margin-top: 4vw;
+  padding: 1.8vw 3.4vw;
+  border-radius: 10vw;
+  border: 0.3vw solid var(--accent-4);
+  color: var(--text);
+  font-size: 3.8vw;
+  font-weight: 700;
+}
+
+/* steps, summary, bullets */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2.4vw;
+  margin-top: 7vw;
+}
+.step, .check, .bullet {
+  display: flex;
+  align-items: center;
+  gap: 3vw;
+  padding: 3.2vw 3.6vw;
+  font-size: 4.6vw;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.step .num {
+  flex: none;
+  font-size: 4.2vw;
+  font-weight: 800;
+  color: var(--accent);
+}
+.step .ico, .check .ico { font-size: 4.8vw; }
+.check .ico {
+  width: 6vw;
+  height: 6vw;
+  border-radius: 1.6vw;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-4);
+  color: #06210f;
+  font-size: 4vw;
+  font-weight: 900;
+}
+.bullet { background: none; border: none; box-shadow: none; padding: 1vw 0; font-size: 4.4vw; }
+.bullet .ico { color: var(--muted); }
+
+/* diagram */
+.flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 8vw;
+}
+.node {
+  display: flex;
+  align-items: center;
+  gap: 3vw;
+  width: 76vw;
+  padding: 3.6vw 4vw;
+  font-size: 4.8vw;
+  font-weight: 700;
+}
+.node .ico { font-size: 6vw; }
+.node.last { border-color: var(--accent); box-shadow: 0 0 6vw rgba(var(--glow), 0.35); }
+.link {
+  width: 0.6vw;
+  height: 7vw;
+  border-radius: 1vw;
+  background: linear-gradient(var(--card-border), var(--accent));
+  transform-origin: top center;
+}
+
+/* warning */
+.warn-head {
+  display: flex;
+  align-items: center;
+  gap: 2.4vw;
+  font-size: 8vw;
+  font-weight: 800;
+  line-height: 1.15;
+}
+.card { margin-top: 5vw; padding: 4.4vw; }
+.card.warn { border-color: currentColor; }
+.card.warn.accent-2 { background: rgba(255, 166, 77, 0.08); }
+.card.warn.accent-3 { background: rgba(255, 93, 108, 0.08); }
+.card.warn.accent-4 { background: rgba(61, 220, 151, 0.08); }
+.card-text {
+  color: var(--text);
+  font-size: 4.8vw;
+  line-height: 1.45;
+  font-weight: 600;
+}
+.card .list { margin-top: 3vw; gap: 0; }
+
+/* cta */
+#stage .bubble {
+  margin-top: 18vw;
+  padding: 6vw;
+  background: #fff;
+  color: #0b1020;
+  text-align: center;
+  font-size: 7vw;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.hint {
+  display: flex;
+  justify-content: center;
+  gap: 2vw;
+  margin-top: 5vw;
+  font-size: 4.4vw;
+  color: var(--muted);
+  font-weight: 600;
+}
+.cta-btn {
+  display: flex;
+  width: max-content;
+  margin: 6vw auto 0;
+  gap: 2vw;
+  padding: 3.6vw 8vw;
+  border-radius: 12vw;
+  background: var(--accent);
+  color: #fff;
+  font-size: 5.4vw;
+  font-weight: 800;
+  box-shadow: 0 2vw 8vw rgba(var(--glow), 0.5);
+}
+
+/* Phụ đề tô sáng */
+#captions {
+  position: absolute;
+  left: 6vw;
+  right: 6vw;
+  bottom: 22vh;
+  text-align: center;
+  font-size: 5.2vw;
+  font-weight: 800;
+  line-height: 1.5;
+  text-shadow: 0 0.4vw 1.6vw rgba(0, 0, 0, 0.6);
+}
+#captions .cap { display: none; }
+#captions .cap.show { display: block; }
+#captions .cw {
+  display: inline-block;
+  padding: 0 1vw;
+  border-radius: 1.2vw;
+}
+#captions .cw.on {
+  background: var(--accent);
+  color: #fff;
+}

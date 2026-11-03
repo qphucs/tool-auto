@@ -1,17 +1,5 @@
-from datetime import datetime, timedelta
-
-from PySide6.QtCore import QDateTime, QItemSelectionModel, Qt
-from PySide6.QtWidgets import (
-    QAbstractItemView,
-    QDateTimeEdit,
-    QDialog,
-    QDialogButtonBox,
-    QHeaderView,
-    QTableWidget,
-    QTableWidgetItem,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import QItemSelectionModel, Qt
+from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QTableWidget, QTableWidgetItem
 
 ID_ROLE = Qt.ItemDataRole.UserRole
 
@@ -56,31 +44,3 @@ def fill_table(table: QTableWidget, rows: list[tuple[int, list[str]]]) -> None:
 def selected_ids(table: QTableWidget) -> list[int]:
     rows = sorted({i.row() for i in table.selectionModel().selectedRows()})
     return [table.item(r, 0).data(ID_ROLE) for r in rows if table.item(r, 0)]
-
-
-def datetime_edit(initial: datetime) -> QDateTimeEdit:
-    edit = QDateTimeEdit(QDateTime(initial))
-    edit.setCalendarPopup(True)
-    edit.setDisplayFormat("dd/MM/yyyy HH:mm")
-    return edit
-
-
-def default_post_time() -> datetime:
-    """1 tiếng nữa, làm tròn lên 5 phút."""
-    t = datetime.now().replace(second=0, microsecond=0) + timedelta(hours=1)
-    return t + timedelta(minutes=(5 - t.minute % 5) % 5)
-
-
-def ask_datetime(parent: QWidget, title: str, initial: datetime) -> datetime | None:
-    dialog = QDialog(parent)
-    dialog.setWindowTitle(title)
-    layout = QVBoxLayout(dialog)
-    edit = datetime_edit(initial)
-    layout.addWidget(edit)
-    buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-    buttons.accepted.connect(dialog.accept)
-    buttons.rejected.connect(dialog.reject)
-    layout.addWidget(buttons)
-    if dialog.exec() != QDialog.DialogCode.Accepted:
-        return None
-    return edit.dateTime().toPython()

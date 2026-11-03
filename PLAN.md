@@ -1,181 +1,194 @@
-# Kế hoạch dự án: Tool Auto – Dựng & đăng video tự động
+# Kế hoạch: Tool Auto – Biến video kiến thức dài thành video ngắn
 
-> Trạng thái: **Đã duyệt**. GĐ0, GĐ1 và GĐ3 đã xong. GĐ1 chưa thử với tài khoản YouTube thật.
-> Theo yêu cầu, làm GĐ3 (dựng video theo mẫu) trước GĐ2; phần tài khoản và đăng bài tạm hoãn.
-> GĐ3 dùng FFmpeg để phát hiện chuyển cảnh thay cho PySceneDetect, nên không phải cài thêm thư viện.
+> Trạng thái: **Đã làm P0–P5**, trừ đóng gói `.exe`. Chưa thử với API key AI thật (Claude/Gemini/Groq/OpenRouter),
+> Google Cloud TTS và giọng Windows; đã thử thật Edge TTS, Whisper, dựng hình.
 >
-> Thay đổi so với kế hoạch ban đầu: lịch đăng dùng bộ hẹn giờ của Qt kiểm tra database mỗi 15 giây thay cho APScheduler
-> (đơn giản hơn, không cần thêm thư viện). Trang Lịch đăng hiện dạng bảng, chưa có kéo thả theo lịch tuần.
+> Thay đổi so với kế hoạch ban đầu (đều do đo thực tế):
+> - Mỗi cảnh dựng thành một file riêng và lưu đệm theo nội dung, thay vì cả clip trên một dòng thời gian:
+>   sửa một cảnh chỉ dựng lại cảnh đó.
+> - Cảnh kêu gọi cuối video do tool tự thêm từ trang Thương hiệu, AI không viết cảnh này.
+> - Edge TTS lỗi ngẫu nhiên ~40% yêu cầu vào lúc dịch vụ kém ổn định: tool thử lại tối đa 7 lần, xen kẽ hai chế độ đọc.
+> - faster-whisper 1.2 lỗi khi đọc file với PyAV 19: tool tự đọc WAV rồi đưa dữ liệu thẳng cho Whisper.
+> - Tốc độ dựng đo được trên máy (RTX 2050, i5-11400H): nháp 540x960 ~0.9 giây/giây video,
+>   bản cuối 1080x1920 ~1.1–1.4 giây/giây video. Không cần phương án dự phòng.
+>
+> Bản mới **thay thế** app cũ (đăng bài YouTube và dựng theo mẫu). Code cũ vẫn nằm trong lịch sử git
+> (commit `1c367a7`) để lấy lại khi cần, ví dụ phần đăng bài.
 
 ## 1. Mục tiêu
 
-App desktop Windows giúp bạn:
+Bạn đưa vào **một video gốc dài** (hướng dẫn, chia sẻ kiến thức, slide, người nói, quay màn hình...).
+Tool tự:
 
-1. **Dựng video theo mẫu**: đưa vào một video mẫu, tool phân tích phong cách (nhịp cắt, khung hình, chữ, phụ đề) rồi dựng video gốc của bạn theo đúng phong cách đó.
-2. **Đăng tự động** lên YouTube, TikTok, Facebook Fanpage, Instagram, với nhiều tài khoản trên mỗi nền tảng.
-3. **Duyệt trước khi đăng**: mọi video phải được bạn duyệt rồi mới vào lịch đăng.
-4. **Tích hợp AI** (giai đoạn sau): viết tiêu đề, mô tả, hashtag, hiểu nội dung video, chọn đoạn hay, ra lệnh bằng chat.
+1. Chép lời video gốc (tiếng Việt hoặc tiếng Anh).
+2. Dùng AI tìm các **kiến thức** trong đó, mỗi kiến thức thành **một video ngắn 45–90 giây**.
+3. Viết **kịch bản tiếng Việt ngắn gọn** cho từng video, chia thành các cảnh.
+4. Chờ **bạn duyệt kịch bản**.
+5. Dựng **video nháp** (độ phân giải thấp, nhanh) để bạn xem và sửa từng cảnh.
+6. Dựng **bản cuối 1080x1920**: hình động kiểu motion graphics nền tối, giọng AI đọc, phụ đề tô sáng theo từng từ, nhạc nền.
+
+Video mẫu bạn gửi **chỉ dùng tham khảo phong cách**. Tool không sao chép chữ, số liệu, logo hay ảnh của video đó.
 
 ## 2. Những gì đã chốt
 
 | Hạng mục | Quyết định |
 |---|---|
-| Nền tảng | YouTube, TikTok, Facebook Fanpage, Instagram |
-| Số tài khoản | Nhiều tài khoản mỗi nền tảng, thiết kế từ đầu |
-| Cách đăng | Tự động thao tác trình duyệt (không dùng API chính thức) |
-| Giao diện | App desktop Windows |
-| Duyệt bài | Bắt buộc duyệt trước khi đăng |
-| Máy chạy | Bật gần như 24/7, tool chạy nền dưới khay hệ thống |
-| Số lượng | Dưới 10 video/ngày |
-| Phiên bản đầu | Cả dựng video lẫn đăng bài, ở mức cơ bản |
-| AI | Làm sau. Bản đầu chỉ chừa sẵn chỗ cắm để thêm AI |
-| Nguồn video | Bạn tự chịu trách nhiệm. Tool chỉ làm việc với file video có sẵn trên máy |
+| Video gốc | Mọi dạng: slide, người nói, quay màn hình, video trên mạng, podcast |
+| Ngôn ngữ | Gốc tiếng Việt hoặc tiếng Anh, thành phẩm luôn tiếng Việt |
+| Số video, độ dài | AI tự quyết, mỗi video 45–90 giây |
+| AI viết kịch bản | Nhiều hãng, chọn trong Cài đặt: Gemini, Claude, Groq, OpenRouter, Ollama |
+| Chép lời | Whisper chạy trên máy (miễn phí, offline) |
+| Giọng đọc | AI đọc (TTS), nhiều lựa chọn, mặc định Edge TTS giọng **nữ** |
+| Duyệt | Duyệt kịch bản trước khi dựng, sau đó xem nháp và sửa từng cảnh |
+| Hình minh họa | Khung hình từ video gốc, hình vẽ bằng code, ảnh chụp trang web được nhắc tới |
+| Màu sắc | Bản đầu dùng theme tối công nghệ. Trang Thương hiệu để bạn đổi màu, logo sau |
+| Kênh | Logo/tên kênh ở góc và cảnh kêu gọi cuối video, bật/tắt và sửa trong Cài đặt |
+| Nhạc nền | Chọn file nhạc mỗi lần dựng (tùy chọn) |
+| Độ phân giải | Bản cuối 1080x1920, 30fps. Bản nháp 540x960 cho nhanh |
+| App | Thay thế app cũ |
 
-## 3. Công nghệ
+## 3. Luồng hoạt động
 
-| Phần | Công nghệ | Lý do |
+```
+Video gốc
+  │ 1. Đọc thông tin, tách âm thanh (FFmpeg)
+  │ 2. Chép lời có mốc thời gian (Whisper)
+  │ 3. Tách khung hình ứng viên tại các điểm chuyển cảnh (FFmpeg)
+  ▼
+Bản chép lời + khung hình
+  │ 4. AI chia kiến thức, viết kịch bản tiếng Việt cho từng video (dạng JSON theo khuôn cố định)
+  ▼
+Kịch bản ──► [Bạn duyệt: sửa chữ, bỏ/thêm cảnh, đổi thứ tự, bỏ cả video]
+  │ 5. Chuẩn bị hình: AI chọn khung hình hợp với từng cảnh, chụp trang web, hoặc vẽ bằng code
+  │ 6. Tạo giọng đọc (TTS) + mốc thời gian từng từ
+  │ 7. Dựng nháp 540x960
+  ▼
+Video nháp ──► [Bạn xem, sửa từng cảnh: chữ, hình, giọng đọc lại] ──► dựng lại cảnh đó
+  │ 8. Dựng bản cuối 1080x1920 + nhạc nền
+  ▼
+Video thành phẩm
+```
+
+**Trạng thái của mỗi video:**
+`Đang phân tích → Chờ duyệt kịch bản → Đang dựng nháp → Chờ xem nháp → Đang dựng bản cuối → Xong`
+
+## 4. Phần AI
+
+### 4.1 Lớp AI dùng chung
+- Một giao diện chung cho mọi hãng, gồm 2 khả năng: **viết chữ** và **đọc ảnh**.
+- Groq, OpenRouter, Ollama dùng chung chuẩn API kiểu OpenAI. Gemini và Claude có bộ chuyển riêng.
+- Có thể chọn **hãng khác nhau cho từng việc**, ví dụ Gemini viết kịch bản, Ollama đọc ảnh.
+- API key lưu trong **Windows Credential Manager**, không lưu trong file.
+- Nút **"Thử kết nối"** trong Cài đặt cho từng hãng.
+
+### 4.2 AI làm những việc gì
+| Việc | Đầu vào | Đầu ra |
 |---|---|---|
-| Ngôn ngữ | Python 3.12 (đã có trên máy) | Hệ sinh thái xử lý video và tự động hóa mạnh |
-| Giao diện | PySide6 (Qt) | App desktop thật, chạy mượt, có icon khay hệ thống |
-| Tự động trình duyệt | Playwright + Chrome | Ổn định, mỗi tài khoản có một hồ sơ trình duyệt riêng |
-| Xử lý video | FFmpeg (đã có trên máy) + PySceneDetect | Cắt, ghép, đổi khung hình, chèn chữ, đo nhịp cắt |
-| Cơ sở dữ liệu | SQLite | Gọn, không cần cài server |
-| Lịch đăng | APScheduler | Hẹn giờ, đăng bù khi lỡ lịch |
-| Đóng gói | PyInstaller | Xuất ra file `.exe` để chạy như phần mềm bình thường |
+| Chia kiến thức | Bản chép lời có mốc thời gian | Danh sách video: tiêu đề, đoạn thời gian trong video gốc |
+| Viết kịch bản | Bản chép lời của đoạn đó | Các cảnh: loại cảnh, tiêu đề, từ nhấn màu, ý ngắn, lời đọc |
+| Dịch | Bản chép lời tiếng Anh | Kịch bản tiếng Việt (làm chung bước viết kịch bản) |
+| Chọn khung hình | Khung hình ứng viên + nội dung cảnh | Khung hình hợp nhất (hoặc "không dùng ảnh") |
+| Tìm trang web | Bản chép lời | Các địa chỉ web được nhắc tới để chụp |
 
-## 4. Luồng hoạt động
+- AI phải trả lời đúng **khuôn JSON**. Tool kiểm tra, sai thì tự hỏi lại.
+- Nếu không có model đọc ảnh: tool chọn khung hình rõ nét nhất trong đoạn thời gian của cảnh.
 
-```
-Video gốc ──► [Dựng theo mẫu] ──► Video thành phẩm
-                    ▲                    │
-             Mẫu phong cách              ▼
-         (phân tích từ video mẫu)  Soạn bài đăng: tiêu đề, mô tả, hashtag,
-                                   chọn tài khoản, chọn giờ đăng
-                                         │
-                                         ▼
-                                  Hàng chờ duyệt ──► Bạn duyệt / sửa / từ chối
-                                         │
-                                         ▼
-                                  Lịch đăng ──► Đăng qua trình duyệt ──► Nhật ký
-                                                        │
-                                          Lỗi/captcha ──► Dừng + báo bạn
-```
+### 4.3 Chép lời và giọng đọc
+- **Whisper** (thư viện faster-whisper) chạy bằng CPU mặc định. Model `small` khoảng 0.5GB, lưu ở ổ E.
+  GPU chỉ bật nếu cài đủ thư viện CUDA (tùy chọn, không bắt buộc).
+- **TTS:** Edge TTS (miễn phí, cần mạng, thư viện không chính thức), Google Cloud TTS (chính thức, có hạn mức miễn phí),
+  hoặc giọng chạy trên máy. Mặc định: Edge TTS giọng nữ `vi-VN-HoaiMyNeural`.
+- **Phụ đề tô sáng** lấy mốc thời gian từ chính giọng đọc AI (không phải từ video gốc).
+  Nếu dịch vụ TTS không trả mốc từng từ, tool chạy Whisper trên file giọng đọc để lấy.
 
-Trạng thái của mỗi bài đăng: `Nháp → Chờ duyệt → Đã lên lịch → Đang đăng → Thành công / Lỗi / Cần bạn xử lý`
+## 5. Phần hình ảnh
 
-## 5. Các module chính
+### 5.1 Cách dựng
+- Mỗi cảnh là một trang **HTML/CSS/JS**. Mọi chuyển động chạy theo **đồng hồ của tool**, không theo thời gian thực.
+- Playwright mở trang, nhảy tới từng khung hình (1/30 giây), chụp ảnh và đẩy thẳng vào FFmpeg.
+- Kết quả giống hệt nhau mỗi lần dựng, và không bị giật dù máy chậm.
 
-### 5.1 Quản lý tài khoản
-- Mỗi tài khoản có **một hồ sơ trình duyệt riêng** để lưu phiên đăng nhập, các tài khoản không lẫn vào nhau.
-- Lần đầu thêm tài khoản: tool mở trình duyệt, **bạn tự đăng nhập** (kể cả xác minh 2 bước). Tool không lưu mật khẩu.
-- Tool kiểm tra định kỳ xem phiên đăng nhập còn hiệu lực không và báo khi cần đăng nhập lại.
-- Có thể gắn nhãn hoặc nhóm tài khoản (ví dụ "Kênh nấu ăn") để đăng hàng loạt.
+### 5.2 Các loại cảnh (bản đầu)
+| Loại | Dùng cho |
+|---|---|
+| Mở đầu (hook) | Tiêu đề lớn 2 dòng, một từ nhấn màu, các nhãn chủ đề |
+| Con số | Số liệu lớn chạy từ 0, kèm chú thích |
+| Câu hỏi / vấn đề | Câu hỏi lớn + hình minh họa |
+| Ảnh chụp | Ảnh trong khung trình duyệt hoặc thẻ, có phóng to vào chi tiết |
+| Các bước | Danh sách đánh số xuất hiện lần lượt ("01 — ÁP DỤNG") |
+| Sơ đồ | Các nút nối nhau bằng mũi tên (A → B → C) |
+| Lưu ý / cảnh báo | Thẻ nhấn màu đỏ/vàng |
+| Tóm tắt | Danh sách tích xanh |
+| Kêu gọi | Câu hỏi gợi bình luận + nút Đăng ký/Theo dõi (bật/tắt được) |
 
-### 5.2 Bộ đăng bài (uploader)
-- Cùng một khuôn chung, mỗi nền tảng có một bộ đăng riêng:
-  - **YouTube**: qua YouTube Studio. Hỗ trợ video thường và Shorts, tiêu đề, mô tả, thẻ, chế độ hiển thị, hẹn giờ ngay trên YouTube.
-  - **TikTok**: qua TikTok Studio trên web. Hỗ trợ mô tả, hashtag, quyền riêng tư.
-  - **Facebook Fanpage** và **Instagram**: qua Meta Business Suite trên web, một nơi đăng được cả hai. Nếu không ổn định thì chuyển sang đăng trực tiếp trên facebook.com và instagram.com.
-- Vị trí các nút bấm (selector) được **tách ra file cấu hình riêng**. Khi nền tảng đổi giao diện, chỉ cần sửa file này, không phải sửa code.
-- Đăng **lần lượt từng video**, có khoảng nghỉ tối thiểu giữa hai lần đăng (cài đặt được).
-- Khi lỗi: chụp màn hình và lưu nhật ký, thử lại tối đa N lần.
-- Khi gặp captcha hoặc bước xác minh: **dừng lại và báo bạn tự xử lý**. Tool không vượt captcha.
+Thành phần dùng chung: nền tối có hạt sáng chuyển động, logo/tên kênh ở góc, phụ đề tô sáng phía dưới.
 
-### 5.3 Dựng video theo mẫu (bản cơ bản, chưa dùng AI)
-- **Phân tích video mẫu** tự động: thời lượng, tỉ lệ khung hình, độ phân giải, fps, số cảnh, độ dài trung bình mỗi cảnh (nhịp cắt).
-- Kết quả lưu thành **Mẫu phong cách**, dùng lại được và sửa tay được, gồm:
-  - Khung hình: 9:16 hoặc 16:9, cắt giữa hoặc nền mờ
-  - Nhịp cắt: độ dài mỗi đoạn, tổng thời lượng
-  - Chữ tiêu đề: nội dung, font, cỡ chữ, màu, vị trí, thời điểm hiện
-  - Phụ đề: kiểu chữ, vị trí
-  - Hiệu ứng cơ bản: zoom nhẹ, chuyển cảnh mờ dần
-- **Dựng video**: áp mẫu lên video gốc, chạy được cho cả 3 loại:
-  - Video dài: cắt ra nhiều clip ngắn theo điểm chuyển cảnh và nhịp của mẫu
-  - Nhiều cảnh quay thô: ghép lại theo nhịp mẫu
-  - Video đã hoàn chỉnh: chỉ đổi khung hình, chèn chữ và phụ đề
-- Bản cơ bản lấy phụ đề từ file `.srt` bạn đưa vào. Phụ đề tự động sẽ có ở giai đoạn AI.
-- Có xem trước trước khi dựng, dựng ở chế độ nền và hiện tiến độ.
+### 5.3 Nguồn hình
+- **Khung hình từ video gốc:** tách tại điểm chuyển cảnh, AI chọn khung phù hợp.
+- **Ảnh chụp trang web:** chỉ trang công khai, không đăng nhập.
+- **Vẽ bằng code:** icon, thẻ, sơ đồ, biểu đồ.
+- **Ảnh bạn thêm:** khi duyệt kịch bản hoặc khi sửa nháp.
 
-### 5.4 Hàng chờ, duyệt và lịch đăng
-- Trang **Chờ duyệt**: xem video, sửa tiêu đề, mô tả, hashtag cho từng nền tảng, rồi bấm Duyệt hoặc Từ chối.
-- Trang **Lịch đăng**: xem theo ngày hoặc tuần, kéo thả để đổi giờ.
-- Một video đăng được lên nhiều tài khoản hoặc nền tảng cùng lúc, mỗi nơi một nội dung riêng.
-- Nếu máy tắt đúng giờ đăng: khi mở lại, tool hỏi bạn có đăng bù hay không.
+### 5.4 Thương hiệu
+Trang **Thương hiệu**: màu nền, màu chữ, 4 màu nhấn, font, logo, tên kênh, câu kêu gọi, bật/tắt logo và cảnh kêu gọi.
+Đổi ở đây thì mọi video dựng sau đều theo.
 
-### 5.5 Lớp AI (chỉ dựng khung ở bản đầu)
-- Có sẵn một giao diện chung cho mọi nhà cung cấp AI, sau này cắm vào mà không phải sửa phần khác:
-  - **Ollama** (chạy trên máy, miễn phí; với GPU 4GB chỉ chạy được model nhỏ)
-  - **Gemini API** (có gói miễn phí, hiểu được video trực tiếp)
-  - **Claude API** (viết tiếng Việt tốt nhất)
-- Bản đầu có trang Cài đặt AI để chọn nhà cung cấp và nhập địa chỉ hoặc key, nhưng chưa có tính năng AI nào chạy.
+## 6. Giao diện app mới
 
-### 5.6 Giao diện
-Các trang: **Tổng quan** · **Tài khoản** · **Dựng video** · **Mẫu phong cách** · **Chờ duyệt** · **Lịch đăng** · **Nhật ký** · **Cài đặt**
+| Trang | Nội dung |
+|---|---|
+| **Dự án** | Danh sách video gốc đã đưa vào, trạng thái, nút "Thêm video gốc" (chọn file hoặc kéo thả) |
+| **Kịch bản** | Các video ngắn AI đề xuất. Sửa từng cảnh: loại cảnh, chữ, lời đọc, hình. Bỏ hoặc thêm cảnh. Duyệt để dựng nháp |
+| **Xem nháp** | Xem video nháp, chọn một cảnh để sửa và dựng lại riêng cảnh đó, chọn nhạc nền, dựng bản cuối |
+| **Thành phẩm** | Các video đã xong, mở file, mở thư mục |
+| **Thương hiệu** | Màu, logo, tên kênh, cảnh kêu gọi |
+| **Cài đặt** | Hãng AI và API key cho từng việc, Whisper, TTS và giọng, thư mục dữ liệu |
+| **Nhật ký** | Nhật ký hoạt động |
 
-- Thu nhỏ xuống khay hệ thống và tự khởi động cùng Windows.
-- Thông báo Windows khi đăng xong, khi lỗi hoặc khi cần bạn xử lý.
-- Giao diện tiếng Việt.
+Việc nặng (chép lời, gọi AI, dựng video) chạy ở luồng nền, có thanh tiến độ và nút Hủy.
 
-## 6. Lưu trữ
+## 7. Công nghệ
 
-Ổ C và D gần đầy (còn 5.2GB và 9.2GB), nên dữ liệu mặc định để ở **`E:\ToolAuto-data`** (đổi được trong Cài đặt):
+| Phần | Công nghệ | Ghi chú |
+|---|---|---|
+| App | Python 3.12 + PySide6 | Giữ từ bản cũ |
+| Database | SQLite | Bảng mới: dự án, video ngắn, cảnh, hình |
+| Video | FFmpeg | Đã có trên máy |
+| Dựng hình | HTML/CSS/JS + Playwright + Chrome | Đã có trên máy |
+| Chép lời | faster-whisper | Cài mới, khoảng 0.5GB model |
+| TTS | edge-tts, Google Cloud TTS (tùy chọn) | Cài mới, nhỏ |
+| AI | httpx gọi API trực tiếp | Không cần thư viện riêng của từng hãng |
 
-```
-E:\ToolAuto-data\
-  profiles\     hồ sơ trình duyệt của từng tài khoản
-  renders\      video đã dựng
-  templates\    mẫu phong cách
-  screenshots\  ảnh chụp khi lỗi
-  logs\         nhật ký
-  toolauto.db   cơ sở dữ liệu
-```
-
-Tool cảnh báo khi ổ đầy và có nút dọn video đã đăng xong.
-
-## 7. Cấu trúc mã nguồn
-
-```
-D:\Tool Auto\
-  app\
-    main.py
-    ui\           các trang giao diện
-    core\         cấu hình, database, hàng chờ, lịch đăng, thông báo
-    accounts\     quản lý tài khoản và hồ sơ trình duyệt
-    uploaders\    base.py, youtube.py, tiktok.py, meta.py
-      selectors\  vị trí nút bấm của từng nền tảng (file YAML)
-    editor\       analyzer.py (phân tích mẫu), template.py, renderer.py (FFmpeg)
-    ai\           giao diện chung + khung cho Ollama, Gemini, Claude
-  docs\           hướng dẫn sử dụng
-  tests\
-  requirements.txt
-  PLAN.md
-```
+**Giữ lại từ bản cũ:** cài đặt, lưu API key, database, nhật ký, chạy FFmpeg, mở Chrome bằng Playwright, đọc phụ đề.
+**Gỡ đi:** đăng bài YouTube, tài khoản, lịch đăng, dựng theo mẫu, các trang cũ.
 
 ## 8. Lộ trình
 
 | Giai đoạn | Nội dung | Kết quả bạn kiểm tra được |
 |---|---|---|
-| **GĐ0 – Nền móng** | Khung app, các trang giao diện, database, cài đặt | Mở được app, chuyển qua lại giữa các trang |
-| **GĐ1 – Đăng YouTube từ đầu đến cuối** | Thêm tài khoản, soạn bài, duyệt, lịch, đăng lên YouTube | Đăng thật một video lên kênh YouTube của bạn theo lịch |
-| **GĐ2 – Thêm nền tảng** | TikTok, Facebook Fanpage, Instagram | Đăng một video lên cả 4 nền tảng |
-| **GĐ3 – Dựng video theo mẫu** | Phân tích mẫu, mẫu phong cách, dựng video, xem trước | Đưa video mẫu và video gốc vào, nhận video thành phẩm |
-| **GĐ4 – Hoàn thiện** | Khay hệ thống, khởi động cùng Windows, thông báo, đăng bù, đóng gói `.exe` | Cài và chạy như phần mềm bình thường |
-| **GĐ5 – AI (sau)** | Phụ đề tự động (Whisper), viết tiêu đề, mô tả, hashtag, chọn đoạn hay, ra lệnh bằng chat | Làm khi bạn đã chọn hướng AI |
+| **P0 – Thử tốc độ + dọn app** | Gỡ phần cũ, khung app mới. Dựng thử 1 cảnh 10 giây bằng HTML → video để **đo tốc độ trên máy bạn** | Video 10 giây theme tối + số liệu tốc độ dựng |
+| **P1 – Thư viện cảnh** | 9 loại cảnh, theme tối, phụ đề tô sáng. Dựng từ một kịch bản viết tay | Video 60 giây hoàn chỉnh (chưa có giọng) |
+| **P2 – Giọng đọc** | Edge TTS, Google TTS, giọng trên máy. Khớp phụ đề theo giọng | Video có giọng đọc khớp phụ đề |
+| **P3 – AI viết kịch bản** | Whisper, lớp AI nhiều hãng, chia kiến thức, viết kịch bản, trang Kịch bản để duyệt | Đưa video gốc vào → ra các kịch bản để duyệt |
+| **P4 – Hình ảnh + nháp** | Khung hình từ video gốc, chụp web, xem nháp, sửa từng cảnh, nhạc nền, bản cuối | **Luồng đầy đủ** từ video gốc tới thành phẩm |
+| **P5 – Hoàn thiện** | Trang Thương hiệu, đóng gói `.exe`, hướng dẫn sử dụng | Cài và dùng như phần mềm bình thường |
 
-Hết mỗi giai đoạn mình sẽ báo để bạn chạy thử, rồi mới làm tiếp giai đoạn sau.
+Hết mỗi giai đoạn mình báo để bạn thử, rồi mới làm tiếp.
 
-## 9. Rủi ro và giới hạn (cần biết trước)
+## 9. Rủi ro và giới hạn
 
-- **Rủi ro tài khoản**: tự động thao tác trình duyệt vi phạm điều khoản của một số nền tảng. Các nền tảng có thể yêu cầu xác minh hoặc khóa tài khoản, đặc biệt khi có nhiều tài khoản. Nên **thử trên tài khoản phụ trước**.
-- **Giao diện nền tảng thay đổi** thì bộ đăng sẽ hỏng và cần cập nhật selector. Đây là việc bảo trì định kỳ.
-- **Đăng nhập Google** đôi khi chặn trình duyệt tự động. Khi đó bạn đăng nhập trong cửa sổ Chrome tool mở ra.
-- **Captcha và xác minh**: tool dừng lại và báo bạn, không tự vượt.
-- **Máy phải bật** thì mới đăng được. Riêng YouTube có thể hẹn giờ trên server của YouTube để giảm phụ thuộc vào máy.
-- **Chưa có tính năng tải video từ kênh khác** và không có kỹ thuật né hệ thống nhận diện bản quyền.
+- **Tốc độ dựng:** chụp 30 khung hình mỗi giây video có thể chậm (ước tính vài phút cho mỗi video 60 giây).
+  P0 sẽ đo thực tế. Nếu quá chậm, phương án dự phòng: dựng các lớp tĩnh bằng HTML rồi để FFmpeg làm chuyển động.
+- **Edge TTS không chính thức:** có thể ngừng hoạt động bất cứ lúc nào. Vì vậy có sẵn Google TTS và giọng trên máy để đổi.
+- **Chất lượng AI:** kịch bản tiếng Việt tốt hay không phụ thuộc hãng AI. Model nhỏ chạy trên GPU 4GB sẽ yếu.
+  Gói miễn phí của các hãng có giới hạn và hay thay đổi.
+- **Chép lời chậm trên CPU:** video 30 phút có thể mất 10 phút trở lên.
+- **Bản quyền:** khung hình và nội dung lấy từ video của người khác vẫn thuộc về họ.
+  Tool viết lại lời và dựng hình mới, nhưng dùng khung hình gốc vẫn có rủi ro. Bạn tự chịu trách nhiệm với nguồn video.
+- **Ổ đĩa:** model Whisper, khung hình tạm và video đều để ở **ổ E** (ổ C chỉ còn khoảng 3GB).
 
 ## 10. Cần bạn chuẩn bị
 
-1. Ít nhất một tài khoản thử nghiệm trên mỗi nền tảng, nên dùng tài khoản phụ.
-2. Một Fanpage và một tài khoản Instagram để thử.
-3. Một video mẫu và vài video gốc để thử phần dựng (GĐ3).
-4. Xác nhận dùng ổ **E:** để lưu dữ liệu.
+1. **API key của ít nhất một hãng AI** để viết kịch bản (nên có Gemini). Cần từ P3.
+2. **Một video gốc để thử** (5–15 phút, nên là video của bạn hoặc được phép dùng). Cần từ P3.
+3. Vài file nhạc nền có quyền dùng (không bắt buộc). Cần từ P4.

@@ -3,7 +3,7 @@ from pathlib import Path
 
 APP_DIR_NAME = "ToolAuto"
 DATA_DIR_NAME = "ToolAuto-data"
-DATA_SUBDIRS = ("profiles", "renders", "templates", "screenshots", "logs")
+DATA_SUBDIRS = ("projects", "outputs", "models", "logs")
 
 
 def config_dir() -> Path:

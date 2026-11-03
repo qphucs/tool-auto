@@ -35,12 +35,4 @@ def ctx(qapp, tmp_path, db):
 
     context = create_context(Settings(data_dir=str(tmp_path / "data")), db)
     yield context
-    context.scheduler.stop()
-    context.worker.stop()
-
-
-@pytest.fixture
-def video_file(tmp_path):
-    path = tmp_path / "clip.mp4"
-    path.write_bytes(b"not really a video")
-    return path
+    context.media.cancel(wait=10)

@@ -58,11 +58,8 @@ def main(argv: list[str] | None = None) -> int:
     ctx = create_context(settings, db)
     window = MainWindow(ctx)
     window.show()
-    window.start_background()
     code = app.exec()
     ctx.media.cancel(wait=5)
-    ctx.scheduler.stop()
-    ctx.worker.stop()
     db.close()
     log.info("Thoát app")
     return code

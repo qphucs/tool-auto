@@ -1,6 +1,7 @@
+import dataclasses
 import json
 import logging
-from dataclasses import asdict, dataclass, field, fields
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from app.core import paths
@@ -11,22 +12,59 @@ SETTINGS_FILE = "settings.json"
 
 
 @dataclass
-class AISettings:
-    provider: str = "none"  # none | ollama | gemini | claude
+class ProviderChoice:
+    provider: str = "none"  # none | gemini | claude | groq | openrouter | ollama
     model: str = ""
-    endpoint: str = "http://localhost:11434"
+
+
+@dataclass
+class AISettings:
+    text: ProviderChoice = field(default_factory=ProviderChoice)  # chia kiến thức, viết kịch bản
+    vision: ProviderChoice = field(default_factory=ProviderChoice)  # chọn khung hình
+    ollama_url: str = "http://localhost:11434"
     # API key không lưu ở đây mà lưu trong Windows Credential Manager (xem secrets.py)
+
+
+@dataclass
+class VoiceSettings:
+    provider: str = "edge"  # edge | google | windows
+    voice: str = "vi-VN-HoaiMyNeural"
+    rate: int = 0  # phần trăm nhanh/chậm so với bình thường, -50..50
+
+
+@dataclass
+class WhisperSettings:
+    model: str = "small"  # tiny | base | small | medium
+    device: str = "cpu"  # cpu | cuda
+
+
+@dataclass
+class BrandSettings:
+    bg1: str = "#070b18"
+    bg2: str = "#101a36"
+    text: str = "#f4f6fb"
+    muted: str = "#9aa5bd"
+    accent: str = "#4f8cff"
+    accent2: str = "#ffa64d"
+    accent3: str = "#ff5d6c"
+    accent4: str = "#3ddc97"
+    font: str = "Segoe UI"
+    channel: str = ""
+    logo: str = ""
+    show_logo: bool = False
+    cta_enabled: bool = True
+    cta_question: str = "Bạn muốn xem mẹo nào tiếp theo?"
+    cta_hint: str = "Bình luận cho mình biết nhé"
+    cta_button: str = "Đăng ký kênh"
 
 
 @dataclass
 class Settings:
     data_dir: str = ""
-    min_gap_minutes: int = 10
-    max_retries: int = 2
-    show_browser: bool = True
-    start_with_windows: bool = False
-    minimize_to_tray: bool = True
     ai: AISettings = field(default_factory=AISettings)
+    voice: VoiceSettings = field(default_factory=VoiceSettings)
+    whisper: WhisperSettings = field(default_factory=WhisperSettings)
+    brand: BrandSettings = field(default_factory=BrandSettings)
 
     @property
     def data_path(self) -> Path:
@@ -40,21 +78,42 @@ class Settings:
     def logs_dir(self) -> Path:
         return self.data_path / "logs"
 
+    @property
+    def projects_dir(self) -> Path:
+        return self.data_path / "projects"
+
+    @property
+    def outputs_dir(self) -> Path:
+        return self.data_path / "outputs"
+
+    @property
+    def models_dir(self) -> Path:
+        return self.data_path / "models"
+
 
 def settings_path() -> Path:
     return paths.config_dir() / SETTINGS_FILE
 
 
-def _pick(cls, data: dict) -> dict:
-    names = {f.name for f in fields(cls)}
-    return {k: v for k, v in data.items() if k in names}
+def _build(cls, data):
+    """Tạo dataclass từ dict, bỏ qua trường lạ và trường sai kiểu (giữ giá trị mặc định)."""
+    obj = cls()
+    if not isinstance(data, dict):
+        return obj
+    for f in dataclasses.fields(cls):
+        if f.name not in data:
+            continue
+        current = getattr(obj, f.name)
+        value = data[f.name]
+        if dataclasses.is_dataclass(current):
+            setattr(obj, f.name, _build(type(current), value))
+        elif type(value) is type(current):
+            setattr(obj, f.name, value)
+    return obj
 
 
 def from_dict(data: dict) -> Settings:
-    ai = AISettings(**_pick(AISettings, data.get("ai") or {}))
-    top = _pick(Settings, data)
-    top.pop("ai", None)
-    return Settings(**top, ai=ai)
+    return _build(Settings, data)
 
 
 def load_settings() -> Settings:

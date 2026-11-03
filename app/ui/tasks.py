@@ -15,6 +15,7 @@ TaskFn = Callable[[Callable[[float, str], None], threading.Event], Any]
 class BackgroundTask(QObject):
     """Chạy một việc nặng (phân tích, dựng video) ở luồng nền, mỗi lúc một việc."""
 
+    started = Signal(str)  # tên việc
     progress = Signal(float, str)
     finished = Signal(str, object, object)  # tên việc, kết quả, lỗi
 
@@ -35,6 +36,7 @@ class BackgroundTask(QObject):
         self._running = True
         self._cancel = threading.Event()
         self._thread = threading.Thread(target=self._run, args=(kind, fn, self._cancel), daemon=True)
+        self.started.emit(kind)
         self._thread.start()
 
     def cancel(self, wait: float = 0) -> None:

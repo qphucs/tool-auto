@@ -103,6 +103,10 @@ QHeaderView::section {
 QSplitter::handle { background: transparent; }
 QPushButton:disabled { color: #9ca3af; background: #f9fafb; }
 
+QWidget#taskbar { background: #eef2ff; border-top: 1px solid #c7d2fe; }
+QProgressBar { border: 1px solid #c7d2fe; border-radius: 4px; background: white; max-height: 10px; }
+QProgressBar::chunk { background: #3b82f6; border-radius: 3px; }
+
 QPushButton {
     background: white;
     border: 1px solid #d1d5db;

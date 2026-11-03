@@ -1,70 +1,31 @@
 # Tool Auto
 
-App desktop Windows để dựng video theo mẫu và đăng tự động lên YouTube, TikTok, Facebook Fanpage, Instagram.
+App desktop Windows biến **video kiến thức dài** thành **các video ngắn 45–90 giây** dạng dọc 9:16:
+AI chép lời, chia kiến thức, viết kịch bản tiếng Việt, rồi dựng hình động kiểu motion graphics nền tối
+kèm giọng AI đọc và phụ đề tô sáng theo từng từ.
+
 Kế hoạch đầy đủ nằm trong [PLAN.md](PLAN.md).
 
-## Chạy app
+## Cần có trên máy
 
-Bấm đúp vào **`run.bat`**. Lần đầu chạy, file này tự tạo môi trường Python và cài thư viện.
-Cần có sẵn **Google Chrome** (để đăng nhập và đăng bài) và **FFmpeg** (để đọc thông tin video).
+- **Google Chrome** (dựng hình, chụp trang web) và **FFmpeg** (xử lý video).
+- **API key của ít nhất một hãng AI** để viết kịch bản: Gemini, Claude, Groq hoặc OpenRouter. Hoặc Ollama chạy trên máy.
 
-## Dựng video theo mẫu
+## Cách dùng
 
-1. Trang **Dựng video → Chọn video mẫu...**. Tool đo kích thước, nhịp cắt (độ dài từng cảnh), màu và viền đen của mẫu
-   (mất vài giây tới vài phút tùy độ dài video).
-2. Thêm **video gốc**: bấm "Thêm video..." hoặc kéo thả file vào danh sách.
-3. Chọn **cách dựng**:
+Bấm đúp **`run.bat`** (lần đầu tự tạo môi trường Python và cài thư viện).
 
-   | Cách dựng | Kết quả |
-   |---|---|
-   | Cắt ghép theo nhịp của mẫu | 1 video dài bằng mẫu, ghép từ các đoạn của video gốc theo đúng nhịp cảnh của mẫu |
-   | Cắt video dài thành nhiều clip | Nhiều video, mỗi video lấy từ một phần của video gốc |
-   | Giữ nguyên nội dung | Giữ đủ video gốc, chỉ đổi khung hình, màu, chữ, phụ đề |
-   | Tự động chọn | Video gốc dài gần bằng mẫu thì giữ nguyên; dài gấp 3 lần trở lên thì cắt nhiều clip; còn lại thì cắt ghép theo nhịp |
-
-4. Tùy chỉnh nếu cần: kích thước, khung hình (cắt đầy khung / nền mờ / viền đen), chỉnh màu giống mẫu, zoom nhẹ,
-   mờ dần khi chuyển cảnh, chữ tiêu đề, phụ đề `.srt`.
-5. Bấm **Dựng video**. Video thành phẩm nằm trong `E:\ToolAuto-data\renders`.
-
-Muốn dùng lại phong cách cho lần sau: bấm **Lưu thành mẫu phong cách...**, lần sau chọn ở ô "mẫu đã lưu".
-
-Giới hạn hiện tại (chưa có AI):
-- Tool chỉ nhận **file video trên máy**, không tải từ link YouTube/TikTok/Facebook.
-- Đoạn lấy từ video gốc được rải đều theo thời gian và nhích về điểm chuyển cảnh gần nhất, chưa biết chọn "đoạn hay".
-- Chữ trong video mẫu chưa đọc được, bạn tự nhập tiêu đề và phụ đề.
-- Chuyển cảnh quá nhẹ (hai cảnh gần giống nhau về màu) có thể không được nhận ra.
-
-## Đăng video lên YouTube lần đầu
-
-1. **Tài khoản → + Thêm tài khoản**, chọn YouTube và đặt tên gợi nhớ.
-2. Tool mở một cửa sổ Chrome riêng. Đăng nhập Google trong đó, chờ vào được YouTube Studio rồi **đóng hẳn cửa sổ Chrome**.
-   Tool tự kiểm tra, trạng thái chuyển sang **Đang hoạt động**.
-3. **Chờ duyệt → + Tạo bài đăng**: chọn video, tick tài khoản, nhập tiêu đề, mô tả, hashtag và giờ đăng.
-4. Chọn bài, sửa nội dung nếu cần, bấm **Duyệt**. Bài chuyển sang **Lịch đăng**.
-5. Đến giờ, tool tự mở YouTube Studio và đăng. Muốn đăng ngay thì chọn bài trong Lịch đăng và bấm **Đăng ngay**.
-
-Lần đầu nên đăng ở chế độ **Riêng tư** và để bật "Hiện cửa sổ trình duyệt khi đăng" (trang Cài đặt) để theo dõi.
-
-### Khi đăng bị lỗi
-
-- Trang **Lịch đăng → Lỗi / cần xử lý** ghi lý do. Bấm **Ảnh chụp lỗi** để xem màn hình lúc lỗi.
-- **Lỗi** thông thường (mạng chậm...): tool tự thử lại sau 5 phút, tối đa theo số lần trong Cài đặt.
-- **Cần bạn xử lý** (hết phiên đăng nhập, YouTube báo vượt giới hạn, không thấy xác nhận...): tool không tự thử lại để tránh đăng trùng.
-  Xử lý xong thì bấm **Thử lại**.
-- Nếu YouTube đổi giao diện khiến tool không tìm thấy nút bấm, sửa file
-  [app/uploaders/selectors/youtube.yaml](app/uploaders/selectors/youtube.yaml), không cần khởi động lại app.
-- Tool nhận biết "đang tải lên" qua chữ trên YouTube Studio (tiếng Anh hoặc tiếng Việt). Nếu Studio của bạn dùng ngôn ngữ khác,
-  thêm chữ đó vào mục `uploading_texts` trong file trên.
-
-## Dữ liệu được lưu ở đâu
-
-| Thứ | Vị trí |
-|---|---|
-| Cài đặt | `%APPDATA%\ToolAuto\settings.json` |
-| API key của AI | Windows Credential Manager (không lưu trong file) |
-| Database, hồ sơ Chrome từng tài khoản, ảnh chụp lỗi, nhật ký | Mặc định `E:\ToolAuto-data`, đổi được trong trang Cài đặt |
-
-Tool không lưu mật khẩu. Phiên đăng nhập nằm trong hồ sơ Chrome riêng của từng tài khoản (`profiles\`).
+1. **Cài đặt**: nhập API key, chọn hãng AI và model ở mục "Viết kịch bản" (bấm "Lấy danh sách model" để chọn đúng tên).
+   Bấm **Thử giọng** để nghe giọng đọc. Bấm **Lưu cài đặt**.
+2. **Dự án → + Thêm video gốc** (hoặc kéo thả file vào bảng) → **Phân tích**.
+   Tool chép lời, AI tìm các kiến thức và viết kịch bản cho từng video ngắn.
+   Lần đầu sẽ tải model Whisper (~0.5GB) vào thư mục dữ liệu.
+3. **Kịch bản**: xem từng video ngắn, sửa chữ, lời đọc, hình minh họa của từng cảnh; thêm/xóa/đổi thứ tự cảnh.
+   Bấm **Duyệt và dựng nháp**.
+4. **Xem nháp**: xem video 540x960. Cảnh nào chưa ưng thì chọn cảnh đó → **Sửa cảnh đã chọn**,
+   sửa xong bấm **Dựng lại nháp** (chỉ các cảnh đã đổi được dựng lại). Chọn nhạc nền nếu muốn.
+5. **Dựng bản cuối 1080x1920**. Video nằm ở trang **Thành phẩm** và thư mục `outputs`.
+6. **Thương hiệu**: đổi màu, font, logo, tên kênh, cảnh kêu gọi cuối video; bấm **Xem trước** để xem thử.
 
 ## Chạy test
 
@@ -76,27 +37,42 @@ Tool không lưu mật khẩu. Phiên đăng nhập nằm trong hồ sơ Chrome 
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Test bộ đăng YouTube chạy trên một trang YouTube Studio giả (`tests/fixtures/fake_studio.html`) bằng Chrome thật, không cần mạng hay tài khoản.
+Test chạy trọn luồng với video thật nhỏ, Chrome và FFmpeg thật; AI và giọng đọc được thay bằng bản giả
+nên không cần mạng hay API key.
+
+Đo tốc độ dựng trên máy: **Cài đặt → Kiểm tra máy**, hoặc `.venv\Scripts\python.exe -m app.render.bench bench-output`.
+
+## Dữ liệu được lưu ở đâu
+
+| Thứ | Vị trí |
+|---|---|
+| Cài đặt | `%APPDATA%\ToolAuto\settings.json` |
+| API key | Windows Credential Manager (không lưu trong file) |
+| Dự án (bản chép lời, khung hình, giọng đọc, nháp) | `<thư mục dữ liệu>\projects\<id>\` |
+| Video thành phẩm | `<thư mục dữ liệu>\outputs\` |
+| Model Whisper | `<thư mục dữ liệu>\models\` |
+
+Thư mục dữ liệu mặc định là `E:\ToolAuto-data`, đổi được trong trang Cài đặt.
+
+## Cách dựng hình
+
+Mỗi cảnh là một trang HTML/CSS/JS trong [app/render/assets](app/render/assets) (`scenes.js` chứa 9 loại cảnh).
+Mọi chuyển động chạy theo đồng hồ của tool (`window.__seek(t)`), không dùng CSS animation. Bộ dựng mở trang bằng
+Chrome, nhảy tới từng khung hình, chụp ảnh và đẩy thẳng vào FFmpeg; 3 tab Chrome dựng song song.
+Mỗi cảnh được lưu đệm theo nội dung, nên sửa một cảnh chỉ phải dựng lại cảnh đó.
 
 ## Cấu trúc mã nguồn
 
 ```
 app\
   main.py          khởi động app
-  core\            cài đặt, database, model dữ liệu, quy tắc duyệt và lịch đăng (posting.py)
-  editor\          phân tích video mẫu (analyzer), lập kế hoạch cắt (planner), dựng bằng FFmpeg (renderer), phụ đề
-  automation\      mở Chrome, luồng nền chạy Playwright
-  uploaders\       bộ đăng cho từng nền tảng + selectors\*.yaml
-  ai\              giao diện chung cho các nhà cung cấp AI (làm ở GĐ5)
-  ui\              cửa sổ chính, các trang, bộ hẹn giờ đăng (scheduler.py)
+  core\            cài đặt, API key, database (dự án, video ngắn), nhật ký, đọc thông tin video
+  ai\              lớp AI dùng chung + Claude (SDK chính thức), Gemini, Groq/OpenRouter/Ollama
+  pipeline\        chép lời (transcribe), AI viết kịch bản (writer), khung hình (frames), hình minh họa (visuals),
+                   giọng đọc (tts), ghép kịch bản thành cảnh (assemble), điều phối các bước (runner)
+  render\          dựng HTML → video (html_renderer), ghép clip + âm thanh (clip), khuôn các loại cảnh (scenes)
+    assets\        runtime.js (bộ chạy hoạt ảnh), theme.css, scenes.js, boot.js
+  editor\          chạy FFmpeg, tìm điểm chuyển cảnh, phụ đề SRT
+  ui\              cửa sổ chính, các trang, ô sửa cảnh, thanh tiến độ chung
 tests\
 ```
-
-## Tiến độ
-
-- [x] GĐ0 – Nền móng: khung app, các trang, database, cài đặt
-- [x] GĐ1 – Đăng YouTube: tài khoản, tạo bài, duyệt, lịch đăng, tự đăng, thử lại
-- [ ] GĐ2 – TikTok, Facebook Fanpage, Instagram (tạm hoãn, ưu tiên phần dựng video)
-- [x] GĐ3 – Dựng video theo mẫu (bản không dùng AI)
-- [ ] GĐ4 – Khay hệ thống, khởi động cùng Windows, thông báo, đóng gói `.exe`
-- [ ] GĐ5 – AI

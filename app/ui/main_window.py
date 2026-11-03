@@ -12,25 +12,24 @@ from PySide6.QtWidgets import (
 
 from app import APP_NAME, __version__
 from app.core.context import AppContext
-from app.ui.pages.accounts import AccountsPage
 from app.ui.pages.base import Page
-from app.ui.pages.dashboard import DashboardPage
+from app.ui.pages.brand import BrandPage
 from app.ui.pages.logs import LogsPage
-from app.ui.pages.editor import EditorPage
-from app.ui.pages.review import ReviewPage
-from app.ui.pages.schedule import SchedulePage
+from app.ui.pages.outputs import OutputsPage
+from app.ui.pages.preview import PreviewPage
+from app.ui.pages.projects import ProjectsPage
+from app.ui.pages.scripts import ScriptsPage
 from app.ui.pages.settings_page import SettingsPage
-from app.ui.pages.templates import TemplatesPage
+from app.ui.taskbar import TaskBar
 
 PAGES: tuple[type[Page], ...] = (
-    EditorPage,
-    TemplatesPage,
-    DashboardPage,
-    AccountsPage,
-    ReviewPage,
-    SchedulePage,
-    LogsPage,
+    ProjectsPage,
+    ScriptsPage,
+    PreviewPage,
+    OutputsPage,
+    BrandPage,
     SettingsPage,
+    LogsPage,
 )
 
 
@@ -39,8 +38,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.ctx = ctx
         self.setWindowTitle(f"{APP_NAME} {__version__}")
-        self.resize(1200, 760)
-        self.setMinimumSize(960, 620)
+        self.resize(1280, 800)
+        self.setMinimumSize(1060, 660)
 
         self.sidebar = QListWidget()
         self.sidebar.setObjectName("sidebar")
@@ -55,7 +54,7 @@ class MainWindow(QMainWindow):
         brand = QLabel(APP_NAME)
         brand.setObjectName("brand")
         side = QWidget()
-        side.setFixedWidth(220)
+        side.setFixedWidth(200)
         side.setStyleSheet("background: #1e2330;")
         side_layout = QVBoxLayout(side)
         side_layout.setContentsMargins(0, 0, 0, 0)
@@ -63,68 +62,61 @@ class MainWindow(QMainWindow):
         side_layout.addWidget(brand)
         side_layout.addWidget(self.sidebar, 1)
 
+        main = QWidget()
+        main_layout = QVBoxLayout(main)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+        main_layout.addWidget(self.stack, 1)
+        main_layout.addWidget(TaskBar(ctx.media))
+
         root = QWidget()
         layout = QHBoxLayout(root)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(side)
-        layout.addWidget(self.stack, 1)
+        layout.addWidget(main, 1)
         self.setCentralWidget(root)
 
         self.sidebar.currentRowChanged.connect(self._show_page)
         self.sidebar.setCurrentRow(0)
         self.statusBar().showMessage(f"Dữ liệu: {ctx.settings.data_dir}")
-        ctx.scheduler.changed.connect(self._refresh_current)
-        ctx.scheduler.message.connect(lambda text: self.statusBar().showMessage(text, 15_000))
 
     def _show_page(self, row: int) -> None:
         if 0 <= row < len(self.pages):
             self.stack.setCurrentIndex(row)
             self.pages[row].on_show()
 
-    def _refresh_current(self) -> None:
-        self.pages[self.stack.currentIndex()].on_show()
+    def page(self, cls: type[Page]) -> Page:
+        return next(p for p in self.pages if isinstance(p, cls))
 
-    def start_background(self) -> None:
-        """Gọi sau khi cửa sổ đã hiện: xử lý bài dở dang, bài quá giờ rồi bật lịch đăng."""
-        scheduler = self.ctx.scheduler
-        interrupted = scheduler.recover()
-        if interrupted:
-            QMessageBox.warning(
-                self,
-                APP_NAME,
-                f"Có {interrupted} video đang đăng dở khi app bị tắt.\n"
-                "Xem ở trang Lịch đăng > Lỗi / cần xử lý và kiểm tra trên nền tảng xem video đã lên chưa.",
-            )
-        overdue = scheduler.overdue_count()
-        if overdue:
-            answer = QMessageBox.question(
-                self,
-                APP_NAME,
-                f"Có {overdue} video đã quá giờ đăng trong lúc app tắt.\n\n"
-                "Đăng bù ngay bây giờ? (Chọn No để đưa chúng về trang Chờ duyệt.)",
-            )
-            if answer != QMessageBox.StandardButton.Yes:
-                scheduler.send_overdue_back()
-        scheduler.start()
-        self._refresh_current()
+    def _switch(self, cls: type[Page]) -> Page:
+        """Chuyển trang mà không gọi on_show (trang tự nạp theo tham số được truyền)."""
+        page = self.page(cls)
+        index = self.pages.index(page)
+        self.sidebar.blockSignals(True)
+        self.sidebar.setCurrentRow(index)
+        self.sidebar.blockSignals(False)
+        self.stack.setCurrentIndex(index)
+        return page
+
+    def open_scripts(self, project_id: int | None = None, clip_id: int | None = None, scene_index: int | None = None) -> None:
+        self._switch(ScriptsPage).open(project_id=project_id, clip_id=clip_id, scene_index=scene_index)
+
+    def open_preview(self, clip_id: int | None = None) -> None:
+        self._switch(PreviewPage).open(clip_id=clip_id)
+
+    def open_brand(self) -> None:
+        self._switch(BrandPage).on_show()
 
     def closeEvent(self, event: QCloseEvent) -> None:
+        scripts = self.page(ScriptsPage)
+        scripts._autosave()
         if self.ctx.media.running:
             answer = QMessageBox.question(
-                self, APP_NAME, "Đang phân tích hoặc dựng video. Thoát bây giờ sẽ hủy việc đó.\n\nVẫn thoát?"
+                self, APP_NAME, "Đang có việc chạy nền. Thoát bây giờ sẽ hủy việc đó.\n\nVẫn thoát?"
             )
             if answer != QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
             self.ctx.media.cancel(wait=5)
-        if self.ctx.scheduler.is_posting:
-            answer = QMessageBox.question(
-                self,
-                APP_NAME,
-                "Đang đăng một video. Thoát bây giờ sẽ dừng giữa chừng.\n\nVẫn thoát?",
-            )
-            if answer != QMessageBox.StandardButton.Yes:
-                event.ignore()
-                return
         event.accept()

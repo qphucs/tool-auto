@@ -1,9 +1,7 @@
-"""Đọc, cắt ghép và ghi phụ đề SRT."""
+"""Đọc và ghi phụ đề SRT."""
 
 import re
 from dataclasses import dataclass
-
-from app.editor.planner import Segment
 
 _TIME = re.compile(r"(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)")
 
@@ -32,19 +30,6 @@ def parse_srt(text: str) -> list[Cue]:
                     cues.append(Cue(_seconds(*g[:4]), _seconds(*g[4:]), body))
                 break
     return cues
-
-
-def remap(cues: list[Cue], segments: list[Segment]) -> list[Cue]:
-    """Dời phụ đề theo các đoạn đã cắt (tất cả đoạn lấy từ cùng một video gốc)."""
-    out: list[Cue] = []
-    t = 0.0
-    for seg in segments:
-        end = seg.start + seg.duration
-        for c in cues:
-            if c.end > seg.start and c.start < end:
-                out.append(Cue(max(c.start, seg.start) - seg.start + t, min(c.end, end) - seg.start + t, c.text))
-        t += seg.duration
-    return out
 
 
 def _fmt(t: float) -> str:
