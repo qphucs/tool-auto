@@ -1,0 +1,32 @@
+# Môi trường và cache
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Dữ liệu chạy thật (database, video, hồ sơ Chrome, nhật ký) nằm ngoài repo,
+# nhưng vẫn chặn để không lỡ commit
+*.db
+*.db-wal
+*.db-shm
+*.log
+profiles/
+renders/
+screenshots/
+logs/
+_work/
+
+# Thông tin nhạy cảm
+.env
+*.key
+*.pem
+settings.local.json
+
+# Tạm và tự sinh
+build/
+dist/
+*.spec
+.idea/
+.vscode/
+Thumbs.db
+desktop.ini
